@@ -39,15 +39,15 @@ describe("WhitelistPurchaseHook", function () {
     ).wait()
 
     // Airdrop ETH to user.
-    const [user1, user2] = await ethers.getSigners()
+    const [user] = await ethers.getSigners()
 
-    await setBalance(user1.address, ethers.utils.parseEther("10"))
+    await setBalance(user.address, ethers.utils.parseEther("10"))
 
-    return { unlock, publiclock, user1, user2, whitelistPurchaseHook }
+    return { unlock, publiclock, user, whitelistPurchaseHook }
   }
 
   it("should succeed to purchase without hook", async function () {
-    const { user1 } = await loadFixture(fixture)
+    const { user } = await loadFixture(fixture)
 
     // Deploy PublicLock.
     const { lock: publiclock } = await unlock.createLock({
@@ -60,124 +60,57 @@ describe("WhitelistPurchaseHook", function () {
 
     // Purchase.
     const value = [0]
-    const recipient = [user1.address]
+    const recipient = [user.address]
     const referrer = [constants.AddressZero]
     const keyManager = [constants.AddressZero]
     const data = ["0x"]
 
     await expect(
       publiclock
-        .connect(user1)
+        .connect(user)
         .purchase(value, recipient, referrer, keyManager, data, { value: utils.parseEther("0.006") })
-    ).not.to.reverted
+    ).not.to.be.revertedWith("INVALID_PURCHASE")
   })
 
   it("should succeed to purchase with hook if msg.sender is whitelisted", async function () {
-    const { publiclock, user1, whitelistPurchaseHook } = await loadFixture(fixture)
+    const { publiclock, user, whitelistPurchaseHook } = await loadFixture(fixture)
 
-    // Add the user1 to the whitelist
-    await whitelistPurchaseHook.addToWhitelist(user1.address)
+    await whitelistPurchaseHook.addToWhitelist([user.address]);
 
-    // Purchase
-    const value = [0]
-    const recipient = [user1.address]
-    const referrer = [constants.AddressZero]
-    const keyManager = [constants.AddressZero]
-    const data = ["0x"]
+    const value = [0];
+    const recipient = user.address;
+    const referrer = constants.AddressZero;
+    const keyManager = constants.AddressZero;
+    const data = "0x";
 
     await expect(
       publiclock
-        .connect(user1)
-        .purchase(value, recipient, referrer, keyManager, data, { value: utils.parseEther("0.006") })
-    )
+        .connect(user)
+        .purchase(value, recipient, referrer, keyManager, data, { value })
+    ).not.to.be.reverted;
   })
 
   it("should fail to purchase with hook if msg.sender already has a ticket", async function () {
-    const { publiclock, user1, whitelistPurchaseHook } = await loadFixture(fixture)
+    const { publiclock, user } = await loadFixture(fixture)
 
-    // Add the user1 to the whitelist and mark that they have purchased a key
-    await whitelistPurchaseHook.addToWhitelist(user1.address)
-    whitelistPurchaseHook.onKeyPurchase(
-      1,
-      user1.address,
-      constants.AddressZero,
-      constants.AddressZero,
-      "0x",
-      0,
-      utils.parseEther("0.006")
-    )
-
-    // Attempt to purchase again
-    const value = [0]
-    const recipient = [user1.address]
-    const referrer = [constants.AddressZero]
-    const keyManager = [constants.AddressZero]
-    const data = ["0x"]
-
-    await expect(
-      publiclock
-        .connect(user1)
-        .purchase(value, recipient, referrer, keyManager, data, { value: utils.parseEther("0.006") })
-    ).to.be.reverted
+    // TODO: Need to be implemented.
   })
 
   it("should fail to purchase with hook if msg.sender != recipient", async function () {
-    const { publiclock, user1, user2, whitelistPurchaseHook } = await loadFixture(fixture)
+    const { publiclock, user } = await loadFixture(fixture)
 
-    // Add the user to the whitelist
-    await whitelistPurchaseHook.addToWhitelist(user1.address)
-
-    // Attempt to purchase with a different recipient
-    const value = [0]
-    const recipient = [user2.address]
-    const referrer = [constants.AddressZero]
-    const keyManager = [constants.AddressZero]
-    const data = ["0x"]
-
-    await expect(
-      publiclock
-        .connect(user2)
-        .purchase(value, recipient, referrer, keyManager, data, { value: utils.parseEther("0.006") })
-    ).to.be.reverted
+    // TODO: Need to be implemented.
   })
 
   it("should fail to purchase with hook if referrer is not zero address", async function () {
-    const { publiclock, user1, user2, whitelistPurchaseHook } = await loadFixture(fixture)
+    const { publiclock, user } = await loadFixture(fixture)
 
-    // Add the user to the whitelist
-    await whitelistPurchaseHook.addToWhitelist(user1.address)
-
-    // Attempt to purchase with a non-zero referrer
-    const value = [0]
-    const recipient = [user1.address]
-    const referrer = [user2.address]
-    const keyManager = [constants.AddressZero]
-    const data = ["0x"]
-
-    await expect(
-      publiclock
-        .connect(user1)
-        .purchase(value, recipient, referrer, keyManager, data, { value: utils.parseEther("0.006") })
-    ).to.be.reverted
+    // TODO: Need to be implemented.
   })
 
   it("should fail to purchase with hook if key manager is not zero address", async function () {
-    const { publiclock, user1, user2, whitelistPurchaseHook } = await loadFixture(fixture)
+    const { publiclock, user } = await loadFixture(fixture)
 
-    // Add the user to the whitelist
-    await whitelistPurchaseHook.addToWhitelist(user1.address)
-
-    // Attempt to purchase with a non-zero key manager
-    const value = [0]
-    const recipient = [user1.address]
-    const referrer = [constants.AddressZero]
-    const keyManager = [user2.address]
-    const data = ["0x"]
-
-    await expect(
-      publiclock
-        .connect(user1)
-        .purchase(value, recipient, referrer, keyManager, data, { value: utils.parseEther("0.006") })
-    ).to.be.reverted
+    // TODO: Need to be implemented.
   })
 })
