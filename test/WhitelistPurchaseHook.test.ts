@@ -39,7 +39,7 @@ describe("WhitelistPurchaseHook", function () {
     ).wait()
 
     // Airdrop ETH to user.
-    const [user] = await ethers.getSigners()
+    const [user] = await ethers.getSigner
 
     await setBalance(user.address, ethers.utils.parseEther("10"))
 
