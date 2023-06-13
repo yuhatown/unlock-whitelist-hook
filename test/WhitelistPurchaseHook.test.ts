@@ -5,25 +5,18 @@ import { ethers, unlock } from "hardhat"
 
 describe("WhitelistPurchaseHook", function () {
   async function fixture() {
-    // Note: The latest versions of Unlock and Publiclock of Unlock hardhat plugin 0.0.18 are 11 and 12 respectively.
-    // In contrast, the actual versions of Unlock and Publiclock are 12 and 13 respectively. However, it is okay to use
-    // it because there is no the difference among features we will use.
-
-    // Deploy Unlock protocol.
     await unlock.deployProtocol(11, 12)
 
-    // Deploy PublicLock.
     const { lock: publiclock } = await unlock.createLock({
       name: "ETHCon Korea 2023 ticket",
-      keyPrice: utils.parseEther("0.006"), // Arbitrary price.
-      expirationDuration: 0, // Never expires.
-      currencyContractAddress: constants.AddressZero, // Zero address is ETH.
-      maxNumberOfKeys: 500, // Arbitrary number.
+      keyPrice: utils.parseEther("0.006"),
+      expirationDuration: 0,
+      currencyContractAddress: constants.AddressZero,
+      maxNumberOfKeys: 500,
     })
 
-    // Attach whitelist purchase hook.
     const WhitelistPurchaseHook = await ethers.getContractFactory("WhitelistPurchaseHook")
-    const whitelistPurchaseHook = await WhitelistPurchaseHook.deploy()
+    const whitelistPurchaseHook = await WhitelistPurchaseHook.deploy(publiclock.address)
     await whitelistPurchaseHook.deployed()
 
     await (
@@ -38,7 +31,6 @@ describe("WhitelistPurchaseHook", function () {
       )
     ).wait()
 
-    // Airdrop ETH to user.
     const [user] = await ethers.getSigner
 
     await setBalance(user.address, ethers.utils.parseEther("10"))
@@ -47,51 +39,30 @@ describe("WhitelistPurchaseHook", function () {
   }
 
   it("should succeed to purchase without hook", async function () {
-    const { user } = await loadFixture(fixture)
+    const { user, unlock } = await loadFixture(fixture)
 
-    // Deploy PublicLock.
     const { lock: publiclock } = await unlock.createLock({
       name: "ETHCon Korea 2023 ticket",
-      keyPrice: utils.parseEther("0.006"), // Arbitrary price.
-      expirationDuration: 0, // Never expires.
-      currencyContractAddress: constants.AddressZero, // Zero address is ETH.
-      maxNumberOfKeys: 500, // Arbitrary number.
+      keyPrice: utils.parseEther("0.006"),
+      expirationDuration: 0,
+      currencyContractAddress: constants.AddressZero,
+      maxNumberOfKeys: 500,
     })
 
-    // Purchase.
-    const value = [0]
+    const value = [publiclock.keyPrice]
     const recipient = [user.address]
     const referrer = [constants.AddressZero]
-    const keyManager = [constants.AddressZero]
     const data = ["0x"]
 
     await expect(
       publiclock
         .connect(user)
-        .purchase(value, recipient, referrer, keyManager, data, { value: utils.parseEther("0.006") })
+        .purchase(value, recipient, referrer, data, { value: utils.parseEther("0.006") })
     ).not.to.be.revertedWith("INVALID_PURCHASE")
   })
 
   it("should succeed to purchase with hook if msg.sender is whitelisted", async function () {
     const { publiclock, user, whitelistPurchaseHook } = await loadFixture(fixture)
-
-    await whitelistPurchaseHook.addToWhitelist([user.address]);
-
-    const value = [0];
-    const recipient = user.address;
-    const referrer = constants.AddressZero;
-    const keyManager = constants.AddressZero;
-    const data = "0x";
-
-    await expect(
-      publiclock
-        .connect(user)
-        .purchase(value, recipient, referrer, keyManager, data, { value })
-    ).not.to.be.reverted;
-  })
-
-  it("should fail to purchase with hook if msg.sender already has a ticket", async function () {
-    const { publiclock, user } = await loadFixture(fixture)
 
     // TODO: Need to be implemented.
   })

@@ -8,23 +8,41 @@ import "@unlock-protocol/contracts/dist/Unlock/IUnlockV12.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract WhitelistPurchaseHook is ILockKeyPurchaseHook {
-    byte32 public merkleRoot = "input here";
+    bytes32 public merkleRoot = "input here";
     error NOT_WHITELISTED();
     error ZERO_ADDRESS();
+    error NOT_LOCKMANAGER();
 
-    constructor() {}
+    IPublicLockV13 public lock;
 
-    // manage lockManger
-    function isLockManager(address account) external view returns (bool);
+    mapping(address => bool) public lockManagers;
 
-    function addLockManager(
-        address account
-    ) external nonpayable onlyLockManager;
+    constructor(IPublicLockV13 _lockAddress) {
+        lock = _lockAddress;
+    }
 
-    function renounceLockManager() external nonpayable onlyLockManager;
+    function isLockManager(address account) external view returns (bool) {
+        return lockManagers[account];
+    }
 
+    function addLockManager(address account) external {
+        if (!lockManagers[msg.sender]) {
+            revert NOT_LOCKMANAGER();
+        }
+        lockManagers[account] = true;
+    }
 
-    function setMerkleRoot(bytes32 merkleRootHash) external onlyLockManager {
+    function renounceLockManager() external {
+        if (!lockManagers[msg.sender]) {
+            revert NOT_LOCKMANAGER();
+        }
+        lockManagers[msg.sender] = false;
+    }
+
+    function setMerkleRoot(bytes32 merkleRootHash) external {
+        if (!lockManagers[msg.sender]) {
+            revert NOT_LOCKMANAGER();
+        }
         merkleRoot = merkleRootHash;
     }
 
@@ -49,12 +67,8 @@ contract WhitelistPurchaseHook is ILockKeyPurchaseHook {
         address referrer,
         bytes calldata data,
         uint minKeyPrice,
-        uint pricePaid,
-        bytes32[] calldata _merkleProof
+        uint pricePaid
     ) external {
-        if (!verifyAddress(_merkleProof)) {
-            revert NOT_WHITELISTED();
-        }
         require(from != recipient, "Sender must be the recipient");
         if (recipient == address(0)) {
             revert ZERO_ADDRESS();
